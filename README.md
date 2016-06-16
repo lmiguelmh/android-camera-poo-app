@@ -1,0 +1,1 @@
+A simple Android project initially based on mobapptuts/android_camera2_api_video_app to demonstrate the usage of design patterns.
