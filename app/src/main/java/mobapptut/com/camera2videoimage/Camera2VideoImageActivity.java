@@ -47,6 +47,8 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
+import mobapptut.com.camera2videoimage.oo.bridge.CameraBridge;
+import mobapptut.com.camera2videoimage.oo.bridge.CameraBridge1MP;
 import mobapptut.com.camera2videoimage.oo.factory.media.Media;
 import mobapptut.com.camera2videoimage.oo.factory.media.MediaFactory;
 import mobapptut.com.camera2videoimage.oo.factory.media.PhotoFactory;
@@ -67,6 +69,7 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
         ORIENTATIONS.append(Surface.ROTATION_270, 270);
     }
 
+    CameraBridge cameraBridge = new CameraBridge1MP();
     private int mCaptureState = STATE_PREVIEW;
     private TextureView mTextureView;
     private CameraDevice mCameraDevice;
@@ -80,14 +83,14 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(), "Foto guardada!", Toast.LENGTH_SHORT).show();
                 }
             };
-    private String mCameraId;
-    private Size mPreviewSize;
-    private Size mVideoSize;
-    private Size mImageSize;
-    private ImageReader mImageReader;
+    //private String mCameraId;
+    //private Size mPreviewSize;
+    //private Size mVideoSize;
+    //private Size mImageSize;
+    //private ImageReader mImageReader;
     private MediaRecorder mMediaRecorder;
     private Chronometer mChronometer;
-    private int mTotalRotation;
+    //private int mTotalRotation;
     private CameraCaptureSession mPreviewCaptureSession;
     private CameraCaptureSession mRecordCaptureSession;
     private CaptureRequest.Builder mCaptureRequestBuilder;
@@ -142,8 +145,15 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
             //DRY: Dont repeat yourself! aquí factory
-            setupCamera(width, height);
-            connectCamera();
+            //setupCamera(width, height);
+            //connectCamera();
+            try {
+                checkCameraPermission();
+                cameraBridge.setup((CameraManager) getSystemService(Context.CAMERA_SERVICE), getWindowManager().getDefaultDisplay().getRotation(), mOnImageAvailableListener, mBackgroundHandler, width, height);
+                cameraBridge.connect((CameraManager) getSystemService(Context.CAMERA_SERVICE), mCameraDeviceStateCallback, mBackgroundHandler);
+            } catch (Exception e) {
+                Toast.makeText(Camera2VideoImageActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
         }
 
         @Override
@@ -239,6 +249,19 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
         }
     }
 
+    private void checkCameraPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ContextCompat.checkSelfPermission(Camera2VideoImageActivity.this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                if (shouldShowRequestPermissionRationale(android.Manifest.permission.CAMERA)) {
+                    throw new RuntimeException("Video app required access to camera");
+                }
+                requestPermissions(new String[]{
+                        android.Manifest.permission.CAMERA,
+                        Manifest.permission.RECORD_AUDIO}, REQUEST_CAMERA_PERMISSION_RESULT);
+            }
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -306,8 +329,15 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
 
         if (mTextureView.isAvailable()) {
             //DRY: Dont repeat yourself! aquí factory
-            setupCamera(mTextureView.getWidth(), mTextureView.getHeight());
-            connectCamera();
+            //setupCamera(mTextureView.getWidth(), mTextureView.getHeight());
+            //connectCamera();
+            try {
+                checkCameraPermission();
+                cameraBridge.setup((CameraManager) getSystemService(Context.CAMERA_SERVICE), getWindowManager().getDefaultDisplay().getRotation(), mOnImageAvailableListener, mBackgroundHandler, mTextureView.getWidth(), mTextureView.getHeight());
+                cameraBridge.connect((CameraManager) getSystemService(Context.CAMERA_SERVICE), mCameraDeviceStateCallback, mBackgroundHandler);
+            } catch (Exception e) {
+                Toast.makeText(Camera2VideoImageActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
         } else {
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
@@ -341,7 +371,8 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
-        closeCamera();
+        //closeCamera();
+        cameraBridge.close(mCameraDevice);
 
         stopBackgroundThread();
 
@@ -362,65 +393,78 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
         }
     }
 
-    private void setupCamera(int width, int height) {
-        CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        try {
-            for (String cameraId : cameraManager.getCameraIdList()) {
-                CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId);
-                if (cameraCharacteristics.get(CameraCharacteristics.LENS_FACING) ==
-                        CameraCharacteristics.LENS_FACING_FRONT) {
-                    continue;
-                }
-                StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                int deviceOrientation = getWindowManager().getDefaultDisplay().getRotation();
-                mTotalRotation = sensorToDeviceRotation(cameraCharacteristics, deviceOrientation);
-                boolean swapRotation = mTotalRotation == 90 || mTotalRotation == 270;
-                int rotatedWidth = width;
-                int rotatedHeight = height;
-                if (swapRotation) {
-                    rotatedWidth = height;
-                    rotatedHeight = width;
-                }
-                //mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), rotatedWidth, rotatedHeight);
-                //ERROR: Surface with size (w=3328, h=1872) and format 0x1 is not valid, size not in valid set: [800x600, 864x480, 800x480, 720x480, 640x480, 480x368, 480x320, 352x288, 320x240, 176x144]
-                //mVideoSize = chooseOptimalSize(map.getOutputSizes(MediaRecorder.class), rotatedWidth, rotatedHeight);
-                //mImageSize = chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG), rotatedWidth, rotatedHeight);
-                mVideoSize = new Size(640, 480);
-                mImageSize = new Size(640, 480);
-                mPreviewSize = new Size(640, 480);
-                mImageReader = ImageReader.newInstance(mImageSize.getWidth(), mImageSize.getHeight(), ImageFormat.JPEG, 1);
-                mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
-                mCameraId = cameraId;
-                return;
-            }
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void connectCamera() {
-        CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) ==
-                        PackageManager.PERMISSION_GRANTED) {
-                    cameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mBackgroundHandler);
-                } else {
-                    if (shouldShowRequestPermissionRationale(android.Manifest.permission.CAMERA)) {
-                        Toast.makeText(this,
-                                "Video app required access to camera", Toast.LENGTH_SHORT).show();
-                    }
-                    requestPermissions(new String[]{android.Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO
-                    }, REQUEST_CAMERA_PERMISSION_RESULT);
-                }
-
-            } else {
-                cameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mBackgroundHandler);
-            }
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
+//    //*** CAMERA BRIDGE ***
+//    private void setupCamera(int width, int height) {
+//        CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+//        try {
+//            for (String cameraId : cameraManager.getCameraIdList()) {
+//                CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId);
+//                if (cameraCharacteristics.get(CameraCharacteristics.LENS_FACING) ==
+//                        CameraCharacteristics.LENS_FACING_FRONT) {
+//                    continue;
+//                }
+//                StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+//                int deviceOrientation = getWindowManager().getDefaultDisplay().getRotation();
+//                mTotalRotation = sensorToDeviceRotation(cameraCharacteristics, deviceOrientation);
+//                boolean swapRotation = mTotalRotation == 90 || mTotalRotation == 270;
+//                int rotatedWidth = width;
+//                int rotatedHeight = height;
+//                if (swapRotation) {
+//                    rotatedWidth = height;
+//                    rotatedHeight = width;
+//                }
+//                //mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), rotatedWidth, rotatedHeight);
+//                //ERROR: Surface with size (w=3328, h=1872) and format 0x1 is not valid, size not in valid set: [800x600, 864x480, 800x480, 720x480, 640x480, 480x368, 480x320, 352x288, 320x240, 176x144]
+//                //mVideoSize = chooseOptimalSize(map.getOutputSizes(MediaRecorder.class), rotatedWidth, rotatedHeight);
+//                //mImageSize = chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG), rotatedWidth, rotatedHeight);
+//                mVideoSize = new Size(640, 480);
+//                mImageSize = new Size(640, 480);
+//                mPreviewSize = new Size(640, 480);
+//                mImageReader = ImageReader.newInstance(mImageSize.getWidth(), mImageSize.getHeight(), ImageFormat.JPEG, 1);
+//                mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
+//                mCameraId = cameraId;
+//                return;
+//            }
+//        } catch (CameraAccessException e) {
+//            e.printStackTrace();
+//        }
+//    }
+//
+//    private void connectCamera() {
+//        CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+//        try {
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+//                if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) ==
+//                        PackageManager.PERMISSION_GRANTED) {
+//                    cameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mBackgroundHandler);
+//                } else {
+//                    if (shouldShowRequestPermissionRationale(android.Manifest.permission.CAMERA)) {
+//                        Toast.makeText(this,
+//                                "Video app required access to camera", Toast.LENGTH_SHORT).show();
+//                    }
+//                    requestPermissions(new String[]{android.Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO
+//                    }, REQUEST_CAMERA_PERMISSION_RESULT);
+//                }
+//
+//            } else {
+//                cameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mBackgroundHandler);
+//            }
+//        } catch (CameraAccessException e) {
+//            e.printStackTrace();
+//        }
+//    }
+//
+//    private void closeCamera() {
+//        if (mCameraDevice != null) {
+//            mCameraDevice.close();
+//            mCameraDevice = null;
+//        }
+//        if (mMediaRecorder != null) {
+//            mMediaRecorder.release();
+//            mMediaRecorder = null;
+//        }
+//    }
+//    //*** CAMERA BRIDGE ***
 
     private void startRecord() {
         try {
@@ -432,14 +476,16 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
                 //setupTimelapse(null);
             }
             SurfaceTexture surfaceTexture = mTextureView.getSurfaceTexture();
-            surfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            //surfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            surfaceTexture.setDefaultBufferSize(cameraBridge.getmPreviewSize().getWidth(), cameraBridge.getmPreviewSize().getHeight());
             Surface previewSurface = new Surface(surfaceTexture);
             Surface recordSurface = mMediaRecorder.getSurface();
             mCaptureRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
             mCaptureRequestBuilder.addTarget(previewSurface);
             mCaptureRequestBuilder.addTarget(recordSurface);
 
-            mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, recordSurface, mImageReader.getSurface()),
+            //mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, recordSurface, mImageReader.getSurface()),
+            mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, recordSurface, cameraBridge.getmImageReader().getSurface()),
                     new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(CameraCaptureSession session) {
@@ -467,14 +513,16 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
 
     private void startPreview() {
         SurfaceTexture surfaceTexture = mTextureView.getSurfaceTexture();
-        surfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+        //surfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+        surfaceTexture.setDefaultBufferSize(cameraBridge.getmPreviewSize().getWidth(), cameraBridge.getmPreviewSize().getHeight());
         Surface previewSurface = new Surface(surfaceTexture);
 
         try {
             mCaptureRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mCaptureRequestBuilder.addTarget(previewSurface);
 
-            mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface()),
+            //mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface()),
+            mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, cameraBridge.getmImageReader().getSurface()),
                     new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(CameraCaptureSession session) {
@@ -506,8 +554,10 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
             } else {
                 mCaptureRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             }
-            mCaptureRequestBuilder.addTarget(mImageReader.getSurface());
-            mCaptureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION, mTotalRotation);
+            //mCaptureRequestBuilder.addTarget(mImageReader.getSurface());
+            mCaptureRequestBuilder.addTarget(cameraBridge.getmImageReader().getSurface());
+            //mCaptureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION, mTotalRotation);
+            mCaptureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION, cameraBridge.getmTotalRotation());
 
             CameraCaptureSession.CaptureCallback stillCaptureCallback = new
                     CameraCaptureSession.CaptureCallback() {
@@ -534,17 +584,6 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
         }
     }
 
-    private void closeCamera() {
-        if (mCameraDevice != null) {
-            mCameraDevice.close();
-            mCameraDevice = null;
-        }
-        if (mMediaRecorder != null) {
-            mMediaRecorder.release();
-            mMediaRecorder = null;
-        }
-    }
-
     private void startBackgroundThread() {
         mBackgroundHandlerThread = new HandlerThread("Camera2VideoImage");
         mBackgroundHandlerThread.start();
@@ -562,7 +601,7 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
         }
     }
 
-//    private void createVideoFolder() {
+    //    private void createVideoFolder() {
 //        File movieFile = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES);
 //        mVideoFolder = new File(movieFile, "camera2VideoImage");
 //        if (!mVideoFolder.exists()) {
@@ -578,7 +617,8 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
         mVideoFileName = videoFile.getAbsolutePath();
         return videoFile;
     }
-//
+
+    //
 //    private void createImageFolder() {
 //        File imageFile = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
 //        mImageFolder = new File(imageFile, "camera2VideoImage");
@@ -645,10 +685,12 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
         mMediaRecorder.setOutputFile(mediaFactory.newMedia().create().getPath());
         mMediaRecorder.setVideoEncodingBitRate(1000000);
         mMediaRecorder.setVideoFrameRate(30);
-        mMediaRecorder.setVideoSize(mVideoSize.getWidth(), mVideoSize.getHeight());
+        //mMediaRecorder.setVideoSize(mVideoSize.getWidth(), mVideoSize.getHeight());
+        mMediaRecorder.setVideoSize(cameraBridge.getmVideoSize().getWidth(), cameraBridge.getmVideoSize().getHeight());
         mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
         mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-        mMediaRecorder.setOrientationHint(mTotalRotation);
+        //mMediaRecorder.setOrientationHint(mTotalRotation);
+        mMediaRecorder.setOrientationHint(cameraBridge.getmTotalRotation());
         mMediaRecorder.prepare();
     }
 
@@ -658,7 +700,8 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
         mMediaRecorder.setOutputFile(mediaFactory.newMedia().create().getPath());
         //mMediaRecorder.setOutputFile(mVideoFileName);
         mMediaRecorder.setCaptureRate(2);
-        mMediaRecorder.setOrientationHint(mTotalRotation);
+        //mMediaRecorder.setOrientationHint(mTotalRotation);
+        mMediaRecorder.setOrientationHint(cameraBridge.getmTotalRotation());
         mMediaRecorder.prepare();
     }
 

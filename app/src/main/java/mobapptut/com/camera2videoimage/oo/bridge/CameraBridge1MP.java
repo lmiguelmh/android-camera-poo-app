@@ -4,6 +4,7 @@ import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
+import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
 import android.os.Handler;
@@ -15,9 +16,9 @@ import android.util.Size;
  */
 public class CameraBridge1MP extends CameraBridge {
 
-    public void setup(int deviceOrientation, ImageReader.OnImageAvailableListener mOnImageAvailableListener, Handler mBackgroundHandler, int width, int height) {
-        if (cameraManager == null)
-            throw new IllegalStateException("setup cameraManager first");
+    public void setup(CameraManager cameraManager, int deviceOrientation, ImageReader.OnImageAvailableListener mOnImageAvailableListener, Handler mBackgroundHandler, int width, int height) {
+        //if (cameraManager == null)
+            //throw new IllegalStateException("setup cameraManager first");
         //CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         //CameraManager cameraManager = cameraManager;
         try {
@@ -53,7 +54,7 @@ public class CameraBridge1MP extends CameraBridge {
         }
     }
 
-    public void connectCamera(String mCameraId, CameraDevice.StateCallback mCameraDeviceStateCallback, Handler mBackgroundHandler) {
+    public void connect(CameraManager cameraManager, CameraDevice.StateCallback mCameraDeviceStateCallback, Handler mBackgroundHandler) {
         //CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         try {
             /*
@@ -80,7 +81,7 @@ public class CameraBridge1MP extends CameraBridge {
         }
     }
 
-    public void closeCamera() {
+    public void close(CameraDevice mCameraDevice) {
         if (mCameraDevice != null) {
             mCameraDevice.close();
             mCameraDevice = null;

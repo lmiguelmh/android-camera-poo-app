@@ -36,8 +36,8 @@ public abstract class CameraBridge {
     ImageReader mImageReader;
     String mCameraId;
     int mTotalRotation;
-    CameraManager cameraManager;
-    CameraDevice mCameraDevice;
+    //CameraManager cameraManager;
+    //CameraDevice mCameraDevice;
 
     public static int sensorToDeviceRotation(CameraCharacteristics cameraCharacteristics, int deviceOrientation) {
         int sensorOrienatation = cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
@@ -55,14 +55,38 @@ public abstract class CameraBridge {
     public void process() {
     }
 
-    public void setCameraManager(CameraManager cameraManager) {
-        this.cameraManager = cameraManager;
+    public Size getmVideoSize() {
+        return mVideoSize;
     }
 
-    public abstract void setup(int deviceOrientation, ImageReader.OnImageAvailableListener mOnImageAvailableListener, Handler mBackgroundHandler, int width, int height);
+    public Size getmImageSize() {
+        return mImageSize;
+    }
 
-    public abstract void connectCamera(String mCameraId, CameraDevice.StateCallback mCameraDeviceStateCallback, Handler mBackgroundHandler);
+    public Size getmPreviewSize() {
+        return mPreviewSize;
+    }
 
-    public abstract void closeCamera();
+    public ImageReader getmImageReader() {
+        return mImageReader;
+    }
+
+    public String getmCameraId() {
+        return mCameraId;
+    }
+
+    public int getmTotalRotation() {
+        return mTotalRotation;
+    }
+
+//    public CameraDevice getmCameraDevice() {
+//        return mCameraDevice;
+//    }
+
+    public abstract void setup(CameraManager cameraManager, int deviceOrientation, ImageReader.OnImageAvailableListener mOnImageAvailableListener, Handler mBackgroundHandler, int width, int height);
+
+    public abstract void connect(CameraManager cameraManager, CameraDevice.StateCallback mCameraDeviceStateCallback, Handler mBackgroundHandler);
+
+    public abstract void close(CameraDevice mCameraDevice);
 
 }
