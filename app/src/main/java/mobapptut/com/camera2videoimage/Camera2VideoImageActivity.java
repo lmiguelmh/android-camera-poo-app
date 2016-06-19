@@ -62,6 +62,7 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
             cameraRecorder = new CameraRecorder();
             if (cameraRecorder.ismIsRecording()) {
                 cameraRecorder.record(mCameraDevice, cameraBridge.getmImageReader(), cameraBridge.getmVideoSize(), cameraBridge.getmPreviewSize(), mTextureView, cameraBridge.getmTotalRotation());
+
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
