@@ -153,6 +153,7 @@ public class CameraRecorder {
             e.printStackTrace();
         }
         //BAD: Dont repeat yourself!
+        mMediaRecorder = new MediaRecorder();
         startRecord(mCameraDevice, mImageReader, mVideoSize, mPreviewSize, mTextureView, mTotalRotation);
         mMediaRecorder.start();
 //            /*
