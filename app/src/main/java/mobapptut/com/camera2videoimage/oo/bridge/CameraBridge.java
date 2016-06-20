@@ -15,11 +15,14 @@ import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.Surface;
 
+import java.util.Observable;
+
 /**
  * @author lmiguelmh
  * @since 15/06/2016.
  */
 public abstract class CameraBridge {
+
     private static SparseIntArray ORIENTATIONS = new SparseIntArray();
 
     static {

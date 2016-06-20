@@ -6,7 +6,7 @@ import java.io.File;
  * @author lmiguelmh
  * @since 15/06/2016.
  */
-public abstract class MediaFactory {
+public abstract class MediaAbstractFactory {
 
     protected File createDirectory(File root, String file) {
         File dir = new File(root, file);

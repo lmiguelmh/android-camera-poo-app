@@ -24,15 +24,19 @@ import android.widget.Toast;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Observable;
+import java.util.Observer;
 
 import mobapptut.com.camera2videoimage.oo.CameraRecorder;
 import mobapptut.com.camera2videoimage.oo.bridge.CameraBridge;
 import mobapptut.com.camera2videoimage.oo.bridge.CameraBridge1MP;
 import mobapptut.com.camera2videoimage.oo.factory.media.Media;
-import mobapptut.com.camera2videoimage.oo.factory.media.MediaFactory;
+import mobapptut.com.camera2videoimage.oo.factory.media.MediaAbstractFactory;
 import mobapptut.com.camera2videoimage.oo.factory.media.PhotoFactory;
 
-public class Camera2VideoImageActivity extends AppCompatActivity {
+public class Camera2VideoImageActivity
+        extends AppCompatActivity
+        implements Observer {
 
     private static final int REQUEST_CAMERA_PERMISSION_RESULT = 0;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT = 1;
@@ -54,7 +58,7 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
     private Chronometer mChronometer;
     private ImageButton mRecordImageButton;
     private ImageButton mStillImageButton;
-    private boolean mIsTimelapse = false;
+    //private boolean mIsTimelapse = false;
     private CameraDevice.StateCallback mCameraDeviceStateCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
@@ -62,7 +66,6 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
             cameraRecorder = new CameraRecorder();
             if (cameraRecorder.ismIsRecording()) {
                 cameraRecorder.record(mCameraDevice, cameraBridge.getmImageReader(), cameraBridge.getmVideoSize(), cameraBridge.getmPreviewSize(), mTextureView, cameraBridge.getmTotalRotation());
-
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -92,13 +95,8 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
     private TextureView.SurfaceTextureListener mSurfaceTextureListener = new TextureView.SurfaceTextureListener() {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-            //DRY: Dont repeat yourself! aquí factory
-            //setupCamera(width, height);
-            //connectCamera();
             try {
-                checkCameraPermission();
-                cameraBridge.setup((CameraManager) getSystemService(Context.CAMERA_SERVICE), getWindowManager().getDefaultDisplay().getRotation(), mOnImageAvailableListener, mBackgroundHandler, width, height);
-                cameraBridge.connect((CameraManager) getSystemService(Context.CAMERA_SERVICE), mCameraDeviceStateCallback, mBackgroundHandler);
+                connectCamera(width, height);
             } catch (Exception e) {
                 Toast.makeText(Camera2VideoImageActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
             }
@@ -119,6 +117,12 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
 
         }
     };
+
+    public void connectCamera(int width, int height) {
+        checkCameraPermission();
+        cameraBridge.setup((CameraManager) getSystemService(Context.CAMERA_SERVICE), getWindowManager().getDefaultDisplay().getRotation(), mOnImageAvailableListener, mBackgroundHandler, width, height);
+        cameraBridge.connect((CameraManager) getSystemService(Context.CAMERA_SERVICE), mCameraDeviceStateCallback, mBackgroundHandler);
+    }
 
     private void checkCameraPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -154,14 +158,13 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
         mRecordImageButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (cameraRecorder.ismIsRecording() || mIsTimelapse) {
+                if (cameraRecorder.ismIsRecording()) {
                     //BAD: el mismo botón cumple dos funciones!
                     //aquí finaliza grabación
                     Toast.makeText(Camera2VideoImageActivity.this, "Finalizando grabación", Toast.LENGTH_SHORT).show();
                     mChronometer.stop();
                     mChronometer.setVisibility(View.INVISIBLE);
                     cameraRecorder.setmIsRecording(false);
-                    mIsTimelapse = false;
                     mRecordImageButton.setImageResource(R.mipmap.btn_video_online);
                     //mMediaRecorder.stop(); //ESTO PROVOCA QUE NO SE PUEDA INICIAR EL SERVICIO NUEVAMENTE!
                     //mMediaRecorder.reset();
@@ -175,7 +178,7 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
                     mRecordImageButton.setImageResource(R.mipmap.btn_video_busy);
                     //BAD: método "checkWriteStoragePermission" inicia captura! el nombre debería ser explícito
                     //checkWriteStoragePermission();
-                    cameraRecorder.checkWriteStoragePermission(mCameraDevice, cameraBridge.getmImageReader(), cameraBridge.getmVideoSize(), cameraBridge.getmPreviewSize(), mTextureView, cameraBridge.getmTotalRotation());
+                    cameraRecorder.record(mCameraDevice, cameraBridge.getmImageReader(), cameraBridge.getmVideoSize(), cameraBridge.getmPreviewSize(), mTextureView, cameraBridge.getmTotalRotation());
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -186,24 +189,6 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
                     });
 
                 }
-            }
-        });
-        mRecordImageButton.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                mIsTimelapse = true;
-                mRecordImageButton.setImageResource(R.mipmap.btn_timelapse);
-                //checkWriteStoragePermission();
-                cameraRecorder.checkWriteStoragePermission(mCameraDevice, cameraBridge.getmImageReader(), cameraBridge.getmVideoSize(), cameraBridge.getmPreviewSize(), mTextureView, cameraBridge.getmTotalRotation());
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        mChronometer.setBase(SystemClock.elapsedRealtime());
-                        mChronometer.setVisibility(View.VISIBLE);
-                        mChronometer.start();
-                    }
-                });
-                return true;
             }
         });
     }
@@ -217,13 +202,8 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
         startBackgroundThread();
 
         if (mTextureView.isAvailable()) {
-            //DRY: Dont repeat yourself! aquí factory
-            //setupCamera(mTextureView.getWidth(), mTextureView.getHeight());
-            //connectCamera();
             try {
-                checkCameraPermission();
-                cameraBridge.setup((CameraManager) getSystemService(Context.CAMERA_SERVICE), getWindowManager().getDefaultDisplay().getRotation(), mOnImageAvailableListener, mBackgroundHandler, mTextureView.getWidth(), mTextureView.getHeight());
-                cameraBridge.connect((CameraManager) getSystemService(Context.CAMERA_SERVICE), mCameraDeviceStateCallback, mBackgroundHandler);
+                connectCamera(mTextureView.getWidth(), mTextureView.getHeight());
             } catch (Exception e) {
                 Toast.makeText(Camera2VideoImageActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
             }
@@ -299,10 +279,17 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
         }
     }
 
-    public void write(MediaFactory factory, byte[] data) throws IOException {
+    public void write(MediaAbstractFactory factory, byte[] data) throws IOException {
         Media media = factory.newMedia();
         if (data != null) {
             media.update(data);
+        }
+    }
+
+    @Override
+    public void update(Observable observable, Object data) {
+        if (data instanceof String) {
+            Toast.makeText(getApplicationContext(), data.toString(), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -325,24 +312,6 @@ public class Camera2VideoImageActivity extends AppCompatActivity {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-//            FileOutputStream fileOutputStream = null;
-//            try {
-//                fileOutputStream = new FileOutputStream(mImageFileName);
-//                fileOutputStream.write(bytes);
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            } finally {
-//
-//                if (fileOutputStream != null) {
-//                    try {
-//                        fileOutputStream.close();
-//                    } catch (IOException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
-//            }
-
         }
     }
 }

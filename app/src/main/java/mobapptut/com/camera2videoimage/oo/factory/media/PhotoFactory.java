@@ -4,7 +4,7 @@ package mobapptut.com.camera2videoimage.oo.factory.media;
  * @author lmiguelmh
  * @since 15/06/2016.
  */
-public class PhotoFactory extends MediaFactory {
+public class PhotoFactory extends MediaAbstractFactory {
     private static PhotoFactory instance;
 
     private PhotoFactory() {
