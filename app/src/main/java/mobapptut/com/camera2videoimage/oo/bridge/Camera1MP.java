@@ -14,7 +14,7 @@ import android.util.Size;
  * @author lmiguelmh
  * @since 17/06/2016.
  */
-public class CameraBridge1MP extends CameraBridge {
+public class Camera1MP extends CameraBridge {
 
     public void setup(CameraManager cameraManager, int deviceOrientation, ImageReader.OnImageAvailableListener mOnImageAvailableListener, Handler mBackgroundHandler, int width, int height) {
         try {

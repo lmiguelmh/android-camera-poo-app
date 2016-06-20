@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package mobapptut.com.camera2videoimage.oo;
+package mobapptut.com.camera2videoimage.oo.observer;
 
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;

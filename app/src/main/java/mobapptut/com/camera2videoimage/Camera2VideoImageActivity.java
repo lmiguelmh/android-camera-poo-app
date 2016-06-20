@@ -27,9 +27,9 @@ import java.nio.ByteBuffer;
 import java.util.Observable;
 import java.util.Observer;
 
-import mobapptut.com.camera2videoimage.oo.CameraRecorder;
+import mobapptut.com.camera2videoimage.oo.observer.CameraRecorder;
 import mobapptut.com.camera2videoimage.oo.bridge.CameraBridge;
-import mobapptut.com.camera2videoimage.oo.bridge.CameraBridge1MP;
+import mobapptut.com.camera2videoimage.oo.bridge.Camera1MP;
 import mobapptut.com.camera2videoimage.oo.factory.media.Media;
 import mobapptut.com.camera2videoimage.oo.factory.media.MediaAbstractFactory;
 import mobapptut.com.camera2videoimage.oo.factory.media.PhotoFactory;
@@ -41,7 +41,7 @@ public class Camera2VideoImageActivity
     private static final int REQUEST_CAMERA_PERMISSION_RESULT = 0;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT = 1;
 
-    CameraBridge cameraBridge = new CameraBridge1MP();
+    CameraBridge cameraBridge = new Camera1MP();
     CameraRecorder cameraRecorder;
     private TextureView mTextureView;
     private CameraDevice mCameraDevice;
