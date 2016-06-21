@@ -64,6 +64,7 @@ public class Camera2VideoImageActivity
         public void onOpened(@NonNull CameraDevice camera) {
             mCameraDevice = camera;
             cameraRecorder = new CameraRecorder();
+            cameraRecorder.addObserver(Camera2VideoImageActivity.this);
             if (cameraRecorder.ismIsRecording()) {
                 cameraRecorder.record(mCameraDevice, cameraBridge.getmImageReader(), cameraBridge.getmVideoSize(), cameraBridge.getmPreviewSize(), mTextureView, cameraBridge.getmTotalRotation());
                 runOnUiThread(new Runnable() {
