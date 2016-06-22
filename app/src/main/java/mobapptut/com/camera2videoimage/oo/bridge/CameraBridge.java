@@ -1,6 +1,7 @@
 package mobapptut.com.camera2videoimage.oo.bridge;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
@@ -15,6 +16,8 @@ import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.Surface;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Observable;
 
 /**
@@ -92,4 +95,17 @@ public abstract class CameraBridge {
 
     public abstract void close(CameraDevice mCameraDevice);
 
+    // patron bridge agregado por  AGQY
+    public abstract void setEffect();
+
+    public byte[] doFilter(Bitmap input) throws IOException {
+        if(filter == null)
+            throw new IllegalStateException("first set the filter");
+        Bitmap out = filter.filter(input);
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        out.compress(Bitmap.CompressFormat.PNG, 100, stream);
+        byte[] byteArray = stream.toByteArray();
+        stream.close();
+        return byteArray;
+    }
 }

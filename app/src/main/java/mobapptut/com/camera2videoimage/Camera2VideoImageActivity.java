@@ -3,6 +3,8 @@ package mobapptut.com.camera2videoimage;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
@@ -16,23 +18,30 @@ import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.Chronometer;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Random;
 
-import mobapptut.com.camera2videoimage.oo.observer.CameraRecorder;
-import mobapptut.com.camera2videoimage.oo.bridge.CameraBridge;
+import mobapptut.com.camera2videoimage.oo.bridge.BlackAndWhiteFilter;
 import mobapptut.com.camera2videoimage.oo.bridge.Camera1MP;
+import mobapptut.com.camera2videoimage.oo.bridge.CameraBridge;
+import mobapptut.com.camera2videoimage.oo.bridge.ContrastAndBrightnessFilter;
+import mobapptut.com.camera2videoimage.oo.bridge.SaturationAndToneFilter;
 import mobapptut.com.camera2videoimage.oo.factory.media.Media;
 import mobapptut.com.camera2videoimage.oo.factory.media.MediaAbstractFactory;
 import mobapptut.com.camera2videoimage.oo.factory.media.PhotoFactory;
+import mobapptut.com.camera2videoimage.oo.observer.CameraRecorder;
 
 public class Camera2VideoImageActivity
         extends AppCompatActivity
@@ -51,7 +60,9 @@ public class Camera2VideoImageActivity
             ImageReader.OnImageAvailableListener() {
                 @Override
                 public void onImageAvailable(ImageReader reader) {
-                    mBackgroundHandler.post(new ImageSaver(reader.acquireLatestImage()));
+                    Image image = reader.acquireLatestImage();
+                    //Log.w("imagesaver", "w="+reader.getWidth() + " h=" + reader.getHeight() );
+                    mBackgroundHandler.post(new ImageSaver(image));
                     Toast.makeText(getApplicationContext(), "Foto guardada!", Toast.LENGTH_SHORT).show();
                 }
             };
@@ -308,8 +319,25 @@ public class Camera2VideoImageActivity
             byte[] bytes = new byte[byteBuffer.remaining()];
             byteBuffer.get(bytes);
             mImage.close();
+
             try {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                Bitmap bitmap = BitmapFactory.decodeStream(bis);
+                int random = new Random().nextInt(3);
+                switch(random) {
+                    case 0:
+                        cameraBridge.setFilter(new ContrastAndBrightnessFilter());
+                        break;
+                    case 1:
+                        cameraBridge.setFilter(new SaturationAndToneFilter());
+                        break;
+                    case 2:
+                        cameraBridge.setFilter(new BlackAndWhiteFilter());
+                        break;
+                }
+                write(PhotoFactory.getInstance(), cameraBridge.doFilter(bitmap));
                 write(PhotoFactory.getInstance(), bytes);
+                //Log.w("saver", "done!");
             } catch (IOException e) {
                 e.printStackTrace();
             }

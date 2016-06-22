@@ -70,4 +70,10 @@ public class Camera1MP extends CameraBridge {
         }
         */
     }
+
+    // patron bridge agregado por  AGQY
+
+    public void setEffect(){
+        // implementacion donde se invocara el metodo filter
+    }
 }

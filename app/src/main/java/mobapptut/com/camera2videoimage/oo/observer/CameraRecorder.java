@@ -88,18 +88,21 @@ public class CameraRecorder extends Observable {
                                 );
                             } catch (CameraAccessException e) {
                                 e.printStackTrace();
+                                CameraRecorder.this.setChanged();
                                 CameraRecorder.this.notifyObservers(e.getMessage());
                             }
                         }
 
                         @Override
                         public void onConfigureFailed(CameraCaptureSession session) {
+                            CameraRecorder.this.setChanged();
                             CameraRecorder.this.notifyObservers("¡No se pudo iniciar sesión de captura!");
                         }
                     }, null);
 
         } catch (Exception e) {
             e.printStackTrace();
+            CameraRecorder.this.setChanged();
             CameraRecorder.this.notifyObservers(e.getMessage());
         }
     }
@@ -182,17 +185,20 @@ public class CameraRecorder extends Observable {
                                         null, mBackgroundHandler);
                             } catch (CameraAccessException e) {
                                 e.printStackTrace();
+                                CameraRecorder.this.setChanged();
                                 CameraRecorder.this.notifyObservers(e.getMessage());
                             }
                         }
 
                         @Override
                         public void onConfigureFailed(CameraCaptureSession session) {
+                            CameraRecorder.this.setChanged();
                             CameraRecorder.this.notifyObservers("¡No es posible iniciar previsualización!");
                         }
                     }, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
+            CameraRecorder.this.setChanged();
             CameraRecorder.this.notifyObservers(e.getMessage());
         }
     }
@@ -228,6 +234,7 @@ public class CameraRecorder extends Observable {
             }
         } catch (CameraAccessException e) {
             e.printStackTrace();
+            CameraRecorder.this.setChanged();
             CameraRecorder.this.notifyObservers(e.getMessage());
         }
     }
@@ -247,6 +254,7 @@ public class CameraRecorder extends Observable {
                                 Integer afState = captureResult.get(CaptureResult.CONTROL_AF_STATE);
                                 if (afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED ||
                                         afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED) {
+                                    CameraRecorder.this.setChanged();
                                     CameraRecorder.this.notifyObservers("¡Autofocus bloqueado!");
                                     startStillCaptureRequest(mCameraDevice, mImageReader, mTotalRotation);
                                 }
@@ -269,6 +277,7 @@ public class CameraRecorder extends Observable {
             }
         } catch (CameraAccessException e) {
             e.printStackTrace();
+            CameraRecorder.this.setChanged();
             CameraRecorder.this.notifyObservers(e.getMessage());
         }
     }
