@@ -299,9 +299,14 @@ public class Camera2VideoImageActivity
     }
 
     @Override
-    public void update(Observable observable, Object data) {
+    public void update(Observable observable, final Object data) {
         if (data instanceof String) {
-            Toast.makeText(getApplicationContext(), data.toString(), Toast.LENGTH_SHORT).show();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(getApplicationContext(), data.toString(), Toast.LENGTH_SHORT).show();
+                }
+            });
         }
     }
 
